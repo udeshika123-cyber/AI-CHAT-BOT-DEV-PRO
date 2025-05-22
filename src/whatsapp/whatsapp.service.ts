@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { AppConfig } from '../config/AppConfig';
 import OpenAI from 'openai';
+import { OpenaiService } from 'src/openai/openai.service';
 
 
 @Injectable()
@@ -9,15 +10,16 @@ export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
   private openai: OpenAI;
 
-  constructor() {
-    this.openai = new OpenAI({
-      apiKey: AppConfig.OPENAI_API_KEY,
-    });
-  }
+  // constructor() {
+  //   this.openai = new OpenAI({
+  //     apiKey: AppConfig.OPENAI_API_KEY,
+  //   });
+  // }
+  constructor(private openaiService: OpenaiService) {}
 
   async handleUserMessage(number: string, message: string): Promise<void> {
     try {
-      const reply = await this.generateOpenAIResponse(message);
+      const reply = await this.openaiService.generateOpenAIResponse(message);
       await this.sendMessage(number, reply);
     } catch (e) {
       this.logger.error('Error handling user message:', e);
@@ -40,10 +42,10 @@ export class WhatsappService {
     let config = {
       method: 'post',
       maxBodyLength: Infinity,
-      url: `https://graph.facebook.com/${AppConfig.WHATSAPP_API_VERSION}/${AppConfig.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      url: `https://graph.facebook.com/${process.env.WHATSAPP_API_VERSION}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${AppConfig.WHATSAPP_API_KEY}`,
+        Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
       },
       data: data,
     };
@@ -60,15 +62,17 @@ export class WhatsappService {
   }
 
   async generateOpenAIResponse(prompt: string): Promise<string> {
-    try {
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-      });
-      return completion.choices[0].message?.content || 'No response';
-    } catch (error) {
-      this.logger.error('OpenAI error:', error);
-      return 'Sorry, I could not process your request.';
-    }
+     return this.openaiService.generateOpenAIResponse(prompt);
+  //   try {
+  //     const completion = await this.openai.chat.completions.create({
+  //       model: 'gpt-4o-mini',
+  //       messages: [{ role: 'user', content: prompt }],
+  //     });
+  //     return completion.choices[0].message?.content || 'No response';
+  //   } catch (error) {
+  //     this.logger.error('OpenAI error:', error);
+  //     return 'Sorry, I could not process your request.';
+  //   }
+  // }
   }
 }

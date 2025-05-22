@@ -8,7 +8,7 @@ import { OpenaiService } from './openai/openai.service';
 
 
 @Module({
-  imports: [ConfigModule.forRoot()],
+  imports: [ConfigModule.forRoot({ isGlobal: true })],
   controllers: [AppController, WhatsappController],
   providers: [AppService, WhatsappService, OpenaiService],
 })
