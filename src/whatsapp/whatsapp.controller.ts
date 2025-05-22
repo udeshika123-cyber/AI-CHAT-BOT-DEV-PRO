@@ -1,5 +1,10 @@
-import { Controller,Get, Logger, Post, Req, Res } from '@nestjs/common';
+import { Controller,Get, Logger, Module, Post, Req, Res } from '@nestjs/common';
 import { WhatsappService } from './whatsapp.service';
+import { ConfigModule } from '@nestjs/config';
+
+// @Module({
+//   imports: [ConfigModule.forRoot()],
+// })
 
 @Controller('whatsapp')
 export class WhatsappController {
@@ -32,6 +37,8 @@ export class WhatsappController {
 
     // @Post('webhook')
     // async handleWebhook(@Req() req, @Res() res) {
+    //    //this.logger.log('Webhook Payload:', JSON.stringify(req.body, null, 2));
+
     //     const payload = req.body.entry;
     //     try {
     //       const change = payload[0].changes[0].value;
@@ -53,45 +60,37 @@ export class WhatsappController {
     //       res.sendStatus(500);
     //     }
     // }
-      @Post('webhook')
+
+
+    @Post('webhook')
 async handleWebhook(@Req() req, @Res() res) {
-  const payload = req.body?.entry;
+  const payload = req.body.entry;
 
   try {
-    if (!Array.isArray(payload) || payload.length === 0) {
-      this.logger.error('Invalid webhook payload: no entry found');
-      return res.status(400).send('Bad Request');
-    }
-
-    const change = payload[0]?.changes?.[0]?.value;
-    const messages = change?.messages;
+    const change = payload?.[0]?.changes?.[0]?.value;
     const contacts = change?.contacts;
+    const messages = change?.messages;
 
-    // Ignore non-message events
-    if (!Array.isArray(messages) || messages.length === 0 || !Array.isArray(contacts) || contacts.length === 0) {
-      this.logger.warn('Ignored webhook: not a user message');
-      return res.sendStatus(200); // Acknowledge to avoid retries
-    }
-
-    const message = messages[0];
-    const contact = contacts[0];
-
-    const senderNumber = contact.wa_id;
-    const messageText = message?.text?.body || '';
-    const senderName = contact.profile?.name || 'Unknown';
+    const senderNumber = Array.isArray(contacts) && contacts.length > 0 ? contacts[0].wa_id : null;
+    const messageText = Array.isArray(messages) && messages.length > 0 ? messages[0].text?.body : null;
+    const senderName = contacts?.[0]?.profile?.name || 'Unknown';
 
     this.logger.log(`Sender Number: ${senderNumber}`);
     this.logger.log(`Message: ${messageText}`);
     this.logger.log(`Sender Name: ${senderName}`);
 
-    // Process the message
-    await this.whatsappService.handleUserMessage(senderNumber, messageText);
+    // Optionally send a reply here using whatsappService
+    //await this.whatsappService.sendMessage(senderNumber, 'Hello from the bot!');
+    if (senderNumber && messageText) {
+      await this.whatsappService.sendMessage(senderNumber, 'Hello from Nest Js?');
+    }
 
-    return res.sendStatus(200);
+    res.sendStatus(200);
   } catch (error) {
     this.logger.error('Error handling webhook:', error);
-    return res.sendStatus(500);
+    res.sendStatus(500);
   }
 }
+
 
 }
